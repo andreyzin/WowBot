@@ -4,7 +4,6 @@ import time
 
 import random
 
-
 class Bot:
 	"""Main wowbot class"""
 
@@ -12,6 +11,9 @@ class Bot:
 		self.api = api
 		self.backup_path = backup_path
 
+		self.data = {}
+		self.restore_data()
+		
 		self.users = {}
 		self.packs = [Pack([], "default")]
 
@@ -30,6 +32,8 @@ class Bot:
 					command.handler(evt=evt, params=command.handler_params, user=user, api=self.api, bot=self))
 
 		user.save()
+		self.save_data()
+
 		self.clear_stack()
 
 	def get_user(self, user_id):
@@ -73,14 +77,25 @@ class Bot:
 		now = time.time()
 		self.users = dict(filter(lambda x: x[1].last_action + expiration > now, self.users.items()))
 
+	def save_data(self):
+		with open('data.json', "w") as json_file:
+			json.dump(self.data, json_file)
+
+	def restore_data(self):
+		if os.path.exists('data.json'):
+			try:
+				with open('data.json') as json_file:
+					self.data = json.load(json_file)
+			except:
+				pass
 
 class Pack:
 	"""Class for commands packing"""
 
-	def __init__(self, commands, name, finder=lambda **x: True, finder_params=None, descripton=None):
+	def __init__(self, commands, name, finder=lambda **x: True, finder_params=None, description=None):
 		self.commands = commands
 		self.name = name
-		self.descripton = descripton
+		self.descripton = description
 		self.finder = finder
 		self.finder_params = finder_params
 
@@ -91,7 +106,7 @@ class Pack:
 	def get_command(self, evt, user, bot):
 		"""Function to get command for event in current pack"""
 		for command in self.commands:
-			if command.explore(evt=evt, user=user, bot=self):
+			if command.explore(evt=evt, user=user, bot=bot):
 				return command
 
 	def explore(self, evt, user, bot):
@@ -154,6 +169,8 @@ class User:
 
 	def save(self):
 		"""Stores user"""
+		if not os.path.exists(f'{self.backup_path}/users/'):
+   			os.makedirs(f'{self.backup_path}/users')
 		with open(f'{self.backup_path}/users/{self.user_id}.json', "w") as json_file:
 			json.dump(self.fields, json_file)
 
