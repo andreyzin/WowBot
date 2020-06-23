@@ -22,14 +22,13 @@ class Bot:
 
 		user = self.get_user(user_id)
 
-		if user.handler():
-			user.handler(evt=evt)
+		if user.isactive():
+			user.proceed(evt=evt)
 
-		if not user.handler():
+		if not user.isactive():
 			command = self.get_command(evt, user)
 			if command:
-				user.handler(
-					command.handler(evt=evt, params=command.handler_params, user=user, api=self.api, bot=self))
+				command.launcher(evt=evt, user=user, bot=self)
 
 		user.save()
 		self.save_data()
@@ -117,7 +116,7 @@ class Pack:
 class Command:
 	"""Class for command"""
 
-	def __init__(self, finder, handler):
+	def __init__(self, finder, handler, launcher = None):
 		if isinstance(finder, tuple):
 			self.finder = finder[0]
 			self.finder_params = finder[1]
@@ -133,7 +132,15 @@ class Command:
 			self.handler_params = None
 
 		self.explore = lambda evt, user, bot: self.finder(evt=evt, params=self.finder_params, user=user, bot=bot)
-
+		
+		self.launcher = launcher or (lambda evt, user, bot: user.revoke(
+			self.handler(
+				evt = evt,
+				params = self.handler_params,
+				user = user,
+				bot = bot
+			)
+		))
 
 class User:
 	"""User class"""
@@ -141,7 +148,7 @@ class User:
 	def __init__(self, user_id, fields={}, restore=True, backup_path="/"):
 		self.user_id = user_id
 		self.fields = fields
-		self.running_handler = None
+		self.handlers = []
 		self.last_action = time.time()
 
 		self.backup_path = backup_path
@@ -149,23 +156,40 @@ class User:
 		if restore:
 			self.restore()
 
-	def handler(self, handler=None, evt=None):
-		"""Util to work with user handler"""
+	def isactive(self):
+		return bool(self.handlers)
+
+	def perform(self, handler):
+		self.handlers.append(handler)
+		self.handlers[-1].send(None)
+
+	def revoke(self, handler = None):
+		self.handlers = []
 		if handler:
-			self.running_handler = handler
-			self.running_handler.send(None)
-			return True
+			self.perform(handler)
 
-		if evt:
-			try:
-				self.running_handler.send(evt)
+	def change(self, handler):
+		if self.handlers:
+			self.handlers[-1] = handler
+			self.handlers[-1].send(None)
+		else:
+			self.perform(handler)
 
-			except StopIteration:
-				self.running_handler = None
+	def proceed(self, evt=None):
+		"""Util to work with user handler"""
+		try:
+			if self.handlers:
+				self.handlers[-1].send(evt)
+			else:
+				return False
 
-			return True
-
-		return self.running_handler
+		except StopIteration:
+			print(self.handlers[-1])
+			del self.handlers[-1]
+	
+	def give(self, data):
+		del self.handlers[-1]
+		self.proceed(data)
 
 	def save(self):
 		"""Stores user"""
