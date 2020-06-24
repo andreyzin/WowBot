@@ -184,7 +184,6 @@ class User:
 				return False
 
 		except StopIteration:
-			print(self.handlers[-1])
 			del self.handlers[-1]
 	
 	def give(self, data):
