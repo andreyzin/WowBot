@@ -59,7 +59,9 @@ class Bot:
 		"""Function to get command for event in first matching pack"""
 		packs = self.get_packs(evt, user)
 		for pack in packs:
-			return pack.get_command(evt, user, self)
+			command = pack.get_command(evt, user, self)
+			if command:
+				return command
 		return None
 
 	def connect(self, obj):

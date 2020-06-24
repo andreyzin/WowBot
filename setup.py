@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="WowBot", # Replace with your own username
-    version="2.1.1",
+    version="2.1.2",
     author="Andrey",
     author_email="zinovand@gmail.com",
     description="Powerful bots utility",
