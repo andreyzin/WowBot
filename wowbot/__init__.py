@@ -22,14 +22,12 @@ class Bot:
 
 		user = self.get_user(user_id)
 
-		if user.isactive():
+		command = self.get_command(evt, user)
+		if command:
+			command.launcher(evt=evt, user=user, bot=self)
+		else:
 			user.proceed(evt=evt)
-
-		if not user.isactive():
-			command = self.get_command(evt, user)
-			if command:
-				command.launcher(evt=evt, user=user, bot=self)
-
+			
 		user.save()
 		self.save_data()
 
